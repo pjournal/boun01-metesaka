@@ -5,5 +5,5 @@
 
 ### Welcome to My GitHub Page for IE48A
 
-You are going to see my assignments and projects on this webpage soon!
+#### [Assingment 1](/files/IE48A_assign1.html)
 
