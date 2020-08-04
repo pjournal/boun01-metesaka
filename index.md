@@ -1,37 +1,9 @@
-## Welcome to GitHub Pages
+# Umut Mete Saka Progress Journal
 
-You can use the [editor on GitHub](https://github.com/pjournal/gh-pages-template/edit/master/index.md) to maintain and preview the content for your website in Markdown files.
+### IE 48A - Boğaziçi University
 
-Whenever you commit to this repository, GitHub Pages will run [Jekyll](https://jekyllrb.com/) to rebuild the pages in your site, from the content in your Markdown files.
 
-### Markdown
+### Welcome to My GitHub Page for IE48A
 
-Markdown is a lightweight and easy-to-use syntax for styling your writing. It includes conventions for
+You are going to see my assignments and projects on this webpage soon!
 
-```markdown
-Syntax highlighted code block
-
-# Header 1
-## Header 2
-### Header 3
-
-- Bulleted
-- List
-
-1. Numbered
-2. List
-
-**Bold** and _Italic_ and `Code` text
-
-[Link](url) and ![Image](src)
-```
-
-For more details see [GitHub Flavored Markdown](https://guides.github.com/features/mastering-markdown/).
-
-### Jekyll Themes
-
-Your Pages site will use the layout and styles from the Jekyll theme you have selected in your [repository settings](https://github.com/pjournal/gh-pages-template/settings). The name of this theme is saved in the Jekyll `_config.yml` configuration file.
-
-### Support or Contact
-
-Having trouble with Pages? Check out our [documentation](https://help.github.com/categories/github-pages-basics/) or [contact support](https://github.com/contact) and we’ll help you sort it out.
