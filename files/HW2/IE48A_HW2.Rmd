@@ -1,0 +1,273 @@
+---
+title: "A work on Electricity with dplyr & ggplot2"
+author: "Umut Mete Saka"
+output: html_document
+---
+
+## Introduction
+
+Electricity is used widely for vast amount of purposes in daily life of households and also businesses in the World. Most production facilities uses electricity, nearly every household has an access to electricity in developing and developed countries. As a developing country, Turkey has met electricity over 100 years ago and it is reported that 100% of Turkish population has an electricity access in 2016[1].
+
+To maintain the sustainable production, transmission and consumption, Energy Exchange Market (EXIST) was founded in 2015. In EXIST consumer companies place their consumption orders one day before. The buying price is called Market Clearing Price (MCP). But the orders given one day before does not fit the requirement. If the company need more electricity or has excess, they have to balance it in intraday market. The amount which is not balanced at the end of the day is bought or sold with the System Marginal Price. SMP is higher than MCP when there is energy deficit and lower than MCP when there is energy surplus.[2]
+
+Market operator also penalizes the operations in BPM by 3%. This is called Imbalance Price. Negative (Deficit) Imbalance Price is calculated as max(MCP,SMP)1.03 and Positive Imbalance Price is calculated as min(MCP,SMP)0.97.[2]
+
+
+This study aims to visualize and manuplate electricity prices data with dplyr and ggplot2 packages. 
+
+The data used in this study is provided from EXIST (Energy Exchange Istanbul) which can be retrieved from [this link.](https://rapor.epias.com.tr/rapor/xhtml/ptfSmfListeleme.xhtml) 
+
+
+## Initial Steps
+
+First of all I load the data and the required packages.
+```{r setup, echo=T,warning=F,results='hide',message=FALSE}
+library(tidyverse)
+library(dplyr)
+library(lubridate)
+library(data.table)
+elec_data <-fread("ptf-smf.csv")
+
+```
+
+Now I have to get the data in a form that I face no problems on my process. 
+
+I check the head of the data ( I couldn't use glimpse() because column names of the data creates a problem) :
+
+```{r}
+head(elec_data)
+```
+
+I change the column names and see the categorical variables in the SMP directions column since there are Turkish characters:
+
+```{r}
+names(elec_data) <- c("DateTime","MCP","SMP","Positive_inbalance","Negative_inbalance","SMP_direction")
+sort(unique(elec_data$SMP_direction))
+
+```
+
+
+The Turkish character strings may create problem. I translate the data.
+
+```{r}
+
+elec_data[,SMP_direction := {
+  if(SMP_direction=="? Dengede") "Balanced"
+  else if(SMP_direction=="? Enerji A\xe7\xfd\xf0\xfd") "Energy_Deficit"
+  else if(SMP_direction=="?Enerji Fazlas\xfd") "Energy_Surplus"
+},by = SMP_direction]
+
+```
+
+
+Now I will convert the columns MCP, SMP, Positive_inbalance, Negative_inbalance to numeric.
+
+```{r}
+
+elec_data[,MCP := as.numeric(str_replace(MCP,",","."))]
+elec_data[,SMP := as.numeric(str_replace(SMP,",","."))]
+elec_data[,Positive_inbalance := as.numeric(str_replace(Positive_inbalance,",","."))]
+elec_data[,Negative_inbalance := as.numeric(str_replace(Negative_inbalance,",","."))]
+```
+
+Now I will convert the Date column to date type.
+
+```{r}
+elec_data <- elec_data %>%
+  mutate(DateTime=as.POSIXct(DateTime, format="%d.%m.%y %H:%M"))%>%
+  mutate(Day=day(DateTime),Month=month(DateTime),Year=lubridate::year(DateTime),Hour=hour(DateTime),
+         Day_of_the_Week= wday(DateTime))
+
+```
+
+
+
+
+Now I will run glimpse and see whether I am ready to the analysis.
+
+```{r}
+elec_data %>% glimpse()
+```
+
+
+Now my data is ready.
+
+
+## Visualisation
+
+I will first start with the graph of MCP and SMP data in July.
+
+```{r}
+ggplot(elec_data,aes(DateTime)) + geom_point(aes(y=SMP,color="SMP")) + geom_point(aes(y=MCP,colour="MCP")) +geom_line(aes(y=SMP,color="SMP"),cex = 0.3) + geom_line(aes(y=MCP,colour="MCP"),cex = 0.3)
+```
+*Graph 1: MCP and SMP in July 2020*
+
+The graph seems to be unclear since there are too many data points and there are fluctuations in the data. But it can be said that the MCP data is more stable with less fluctuations. 
+
+
+I want to learn whether there is a pattern in this fluctuations so I will draw the hourly and weekdays mean of the prices.
+
+```{r}
+elec_data_hourly_means <- elec_data%>%
+  select(Hour,MCP,SMP)
+
+elec_data_hourly_means <- elec_data_hourly_means %>%
+  group_by(Hour) %>%
+  mutate(hour_mean_MCP=mean(MCP)) %>%
+  mutate(hour_mean_SMP = mean(SMP))
+
+ggplot(elec_data_hourly_means,aes(Hour)) + geom_point(aes(y=hour_mean_MCP,color="MCP"),cex=2.5) + geom_point(aes(y=hour_mean_SMP,color = "SMP"),cex=2.5)
+```
+*Graph 2: MCP and SMP hourly means*
+
+
+```{r}
+elec_data_weekday_means <- elec_data%>%
+  select(Day_of_the_Week,MCP,SMP)
+
+elec_data_weekday_means <- elec_data_weekday_means %>%
+  group_by(Day_of_the_Week) %>%
+  mutate(Wday_mean_MCP = mean(MCP)) %>%
+  mutate(Wday_mean_SMP = mean(SMP))
+
+ggplot(elec_data_weekday_means,aes(Day_of_the_Week)) + geom_point(aes(y=Wday_mean_MCP,color="MCP"),cex=2.5) + geom_point(aes(y=Wday_mean_SMP,color = "SMP"),cex=2.5)
+```
+*Graph 3: MCP and SMP weekday means (1: Sunday)*
+
+
+We can see that in some hours SMP is clearly higher than MCP (between 14 and 19), in some hours clearly lower than MCP (4,7,8) and in some hours they are close to each other.
+
+There seems a significant effect of the weekdays on the prices. In Wednesday and Friday MCP is clearly higher but in other days MCP is lower than SMP.
+
+When we check the proportions of SMP direction in weekdays we should see that in the days with Energy Surplus, SMP is lower.
+
+```{r,warning=F}
+elec_data_weekday_direction  <- elec_data%>%
+  select(Day_of_the_Week,SMP_direction)
+
+elec_data_weekday_direction <- elec_data_weekday_direction %>%
+  group_by(SMP_direction) %>%
+  mutate(Direction = {if(SMP_direction == "Energy_Surplus") {1}
+    else if(SMP_direction == "Energy_Deficit") {-1}
+    else if(SMP_direction == "Balanced") {0}
+    } )
+  
+  
+  
+  
+
+elec_data_weekday_direction <- elec_data_weekday_direction %>%
+  group_by(Day_of_the_Week) %>%
+  mutate(Balance_Direction = sum(Direction))
+
+
+
+
+ggplot(elec_data_weekday_direction,aes(x=Day_of_the_Week,y=Direction, color = Direction)) + geom_bar(stat = "identity") +geom_point(aes(y=Balance_Direction),cex=3.5,color = 'Red')
+```
+*Graph 4: SMP Direction weekday means (1: Sunday) (-1:Energy Deficit, 0:Balanced, +1: Energy Surplus)*
+
+In wednesdays energy surplus occurs more than deficit. This was expected since in that day SMP mean is much lower than MCP. But I was expecting the same in Friday too. Friday seems to have more surplus than the other days but still it has more deficit. So I assume SMP is much more times lower when there is deficit than it is higher when there is surplus. 
+
+Now I will check the proportions of SMP to MCP in cases of surplus and deficit.
+
+Mean proportion of SMP over MCP in surplus:
+```{r}
+elec_data %>%
+  filter(SMP_direction == "Energy_Surplus") %>%
+  mutate(proportion = (SMP / MCP)) %>% 
+  select(proportion) %>%
+  unlist() %>%
+  mean()
+
+```
+
+Mean proportion of SMP over MCP in deficit:
+```{r}
+elec_data %>%
+  filter(SMP_direction == "Energy_Deficit") %>%
+  mutate(proportion = (SMP / MCP)) %>% 
+  select(proportion) %>%
+  unlist() %>%
+  mean()
+```
+
+We can see that Having more electricity is penalyzed more than having shortage. 
+
+
+
+## BONUS
+We can perform a solution like the newsvendor problem where you have to buy newspapers in the early morning and if you buy too less you cannot reach the demand and cannot earn enough or if you buy too much your newspapers goes to trash. 
+
+Lets assume our daily electricity need is distributed normally with mean 100 MWh and MCP is fixed 100TL/MWh. We have to return the electricity with SMP equals to MCP times the surplus proportion of 0.7467046 and buy the deficit amount with MP equals to MCP times the deficit proportion of 1.105733. In such case we should order 100*mean(1.105733,0.7467046). Lets make a simulation of 50 days.
+
+```{r}
+set.seed(209)
+sample_consumption <- rnorm(50,100,15)
+
+mean_proportion = (1.105733+0.7467046)/2
+
+simulation <- data.table(sample_consumption)
+
+simulation <- simulation %>%
+  mutate(order = 100) %>%
+  mutate(better_order = order*mean_proportion) %>%
+  mutate(MCP = 100) %>%
+  mutate(SMP_surplus = MCP * 0.7467046) %>%
+  mutate(SMP_deficit = MCP * 1.105733) %>%
+  mutate(turnout_1 = sample_consumption - order) %>%
+  mutate(turnout_2 = sample_consumption - better_order) 
+
+simulation_1 <- simulation %>% 
+  select(order,MCP,SMP_surplus,SMP_deficit,turnout_1)
+
+simulation_2 <- simulation %>% 
+  select(better_order,MCP,SMP_surplus,SMP_deficit,turnout_2)
+
+simulation_1_surplus <- simulation_1 %>%
+  filter(turnout_1<=0) %>%
+  mutate(pay = order*MCP+SMP_surplus*turnout_1)
+
+simulation_1_deficit <- simulation_1 %>%
+  filter(turnout_1>=0) %>%
+  mutate(pay = order*MCP+SMP_deficit*turnout_1)
+
+simulation_2_surplus <- simulation_2 %>%
+  filter(turnout_2<=0) %>%
+  mutate(pay = better_order*MCP+SMP_surplus*turnout_2)
+
+simulation_2_deficit <- simulation_2 %>%
+  filter(turnout_2>=0) %>%
+  mutate(pay = better_order*MCP+SMP_deficit*turnout_2)
+
+
+```
+
+Total amount we pay if we think average is the best:
+
+```{r}
+sum(simulation_1_deficit$pay,simulation_1_surplus$pay)
+
+```
+
+Total amount we pay if we know about newsvendor problem and solve this problem with similiar approach:
+
+```{r}
+sum(simulation_2_deficit$pay,simulation_2_surplus$pay)
+
+```
+
+###### IMPORTANT WARNING: 
+
+This simulation was just made with the incentive of showing an approach with newsvendor problem, if the case is orders made daily and the only purchase mechanism is buying with MCP and balancing the rest with SMP price. We also do not consider the total situation whether surplus or deficit will happen in the total market. In real life it is not the case. There is intraday market and prices change constantly. 
+
+
+## References
+
+[R documentation](https://www.rdocumentation.org/)
+
+[EXIST - Transparency Platform](https://seffaflik.epias.com.tr/transparency/tuketim/gerceklesen-tuketim/gercek-zamanli-tuketim.xhtml) 
+
+1.[Trading Eceonomics (About Turkish electricity access)](https://tradingeconomics.com/turkey/access-to-electricity-percent-of-total-population-wb-data.html)
+
+2.[Mini Tutorial about Electricity Market Prices, Orbay, Berk](https://boun-ie48a.github.io/files/electricity_markets_mini_tutorial)
