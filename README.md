@@ -5,4 +5,7 @@
 ### You can visit my progress journal via [this link](https://pjournal.github.io/boun01-metesaka/)
 
 
-#### [Assingment 2](https://pjournal.github.io/boun01-metesaka/files/HW2/IE48A_HW2.html)
+### [Assingment 2](https://pjournal.github.io/boun01-metesaka/files/HW2/IE48A_HW2.html)
+
+
+### [Assingment 3](https://pjournal.github.io/boun01-metesaka/files/HW3/HW3.html)
